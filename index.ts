@@ -66,8 +66,8 @@ const logMessage = async (message, config, logToRedshift = false) => {
     console.log('logMessage')
     console.log(message)
     if (logToRedshift) {
-        console.log(query)
         const query = `INSERT INTO ${sanitizeSqlIdentifier(config.pluginLogTableName)} (event_at, message) VALUES (GETDATE(), $1)`
+        console.log(query)
         const queryResponse = await executeQuery(query, [message], config)
         console.log(queryResponse)
     }
