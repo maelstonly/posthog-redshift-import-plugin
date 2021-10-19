@@ -47,6 +47,7 @@ interface TransformationsMap {
     }
 }
 const EVENTS_PER_BATCH = 5000
+const RUN_LIMIT = 20
 const IS_CURRENTLY_IMPORTING = 'redshift_impordbyttfbbrezinfregb'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
@@ -79,6 +80,9 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
 
 
     const initialValue = await storage.get(IS_CURRENTLY_IMPORTING)
+
+    console.log('initialValue',initialValue)
+
     if (initialValue === true) {
         console.log('EXIT due to initial value = true')
         return
@@ -86,8 +90,8 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     await storage.set(IS_CURRENTLY_IMPORTING, true)
 
     logMessage('launching job', config, true)
-    await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0 }).runIn(10, 'seconds')
-    logMessage('finished job', config, true)
+    await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
+    logMessage('done launching job', config, true)
    
 }
 
@@ -95,6 +99,7 @@ export const teardownPlugin: RedshiftImportPlugin['teardownPlugin'] = async ({ g
     console.log('teardown')
     const beforeTearDown = await cache.get(IS_CURRENTLY_IMPORTING)
     await storage.set(IS_CURRENTLY_IMPORTING, false)
+    console.log("done launching")
 }
 
 
@@ -131,7 +136,8 @@ const importAndIngestEvents = async (
     meta: PluginMeta<RedshiftImportPlugin>
 ) => {
     const { global, cache, config, jobs } = meta
-    logMessage('launched', config, true)
+    console.log('launched job', payload.successiveRuns)
+
     const totalRowsResult = await executeQuery(
         `SELECT COUNT(1) FROM ${sanitizeSqlIdentifier(config.tableName)} WHERE NOT EXISTS (SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id)`,
         [],
@@ -250,15 +256,16 @@ const importAndIngestEvents = async (
  
     if (eventsToIngest.length < EVENTS_PER_BATCH) { // ADAPTED ?
         //await storage.set(IS_CURRENTLY_IMPORTING, false)
-        console.log('loading next batch')
+        console.log('finished')
         await jobs
             .importAndIngestEvents({ ...payload, retriesPerformedSoFar: 0})
             .runIn(10, 'seconds') 
         return
     }
 
-    await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0 })
+    await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns : payload.successiveRuns+1 })
                .runIn(1, 'seconds')
+    console.log('randomJobJean ', payload.successiveRuns, ' after next call')
     return 
 }
 
