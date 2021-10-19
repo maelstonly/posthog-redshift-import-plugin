@@ -265,7 +265,7 @@ const importAndIngestEvents = async (
 
     await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns : payload.successiveRuns+1 })
                .runIn(1, 'seconds')
-    console.log('randomJobJean ', payload.successiveRuns, ' after next call')
+    console.log('Job ', payload.successiveRuns, ' after next call')
     return 
 }
 
