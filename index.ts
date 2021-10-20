@@ -46,9 +46,9 @@ interface TransformationsMap {
         transform: (row: QueryResultRow, meta: PluginMeta<RedshiftImportPlugin>) => Promise<TransformedPluginEvent>
     }
 }
-const EVENTS_PER_BATCH = 50
+const EVENTS_PER_BATCH = 250
 const RUN_LIMIT = 20
-const IS_CURRENTLY_IMPORTING = 'redshift_impordbyttfbbrezinfregb'
+const IS_CURRENTLY_IMPORTING = 'stripped_import_plugin_'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
 }
@@ -65,7 +65,7 @@ export const jobs: RedshiftImportPlugin['jobs'] = {
 }
 
 
-export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config, cache, jobs, global, storage }) => {
+export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config, cache, jobs, global, storage, utils}) => {
     await logMessage('setupPlugin', config, true)
 
     const requiredConfigOptions = ['clusterHost', 'clusterPort', 'dbName', 'dbUsername', 'dbPassword']
@@ -78,16 +78,18 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
         throw new Error('Cluster host must be a valid AWS Redshift host')
     }
 
+    const cursor = utils.cursor
 
-    const initialValue = await storage.get(IS_CURRENTLY_IMPORTING)
-
-    console.log('initialValue',initialValue)
-
-    if (initialValue === true) {
-        console.log('EXIT due to initial value = true')
+    await cursor.init(IS_CURRENTLY_IMPORTING)
+    
+    const cursorValue = await cursor.increment(IS_CURRENTLY_IMPORTING)
+    
+    console.log('cursorValue = ', cursorValue)
+    
+    if (cursorValue > 1) {
+        console.log('EXIT due to cursorValue > 1')
         return
     }
-    await storage.set(IS_CURRENTLY_IMPORTING, true)
 
     logMessage('launching job', config, true)
     await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
