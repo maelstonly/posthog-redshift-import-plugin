@@ -52,7 +52,7 @@ const IS_CURRENTLY_IMPORTING = 'stripped_import_plugin_'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
 }
-const logMessage = async (message, config, logToRedshift = false) => {
+const logMessage = async (message, config, logToRedshift = 0) => {
     console.log(message)
     if (logToRedshift) {
         const query = `INSERT INTO ${sanitizeSqlIdentifier(config.pluginLogTableName)} (event_at, message) VALUES (GETDATE(), $1)`
