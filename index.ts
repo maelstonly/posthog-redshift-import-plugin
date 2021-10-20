@@ -46,7 +46,7 @@ interface TransformationsMap {
         transform: (row: QueryResultRow, meta: PluginMeta<RedshiftImportPlugin>) => Promise<TransformedPluginEvent>
     }
 }
-const EVENTS_PER_BATCH = 5000
+const EVENTS_PER_BATCH = 50
 const RUN_LIMIT = 20
 const IS_CURRENTLY_IMPORTING = 'redshift_impordbyttfbbrezinfregb'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
@@ -118,6 +118,8 @@ const executeQuery = async (
         database: config.dbName,
         port: parseInt(config.clusterPort),
     })
+    let startedAt : Date =  new Date()
+
     await pgClient.connect()
     let error: Error | null = null
     let queryResult: QueryResult<any> | null = null
@@ -127,6 +129,11 @@ const executeQuery = async (
         error = err
     }
     await pgClient.end()
+
+    let finishedAt : Date =  new Date()
+    let queryDurationSeconds : number = finishedAt - startedAt
+    console.log('query result', query.split(' ')[0], 'duration (seconds) =', queryDurationSeconds)
+
     return { error, queryResult }
 }
 
@@ -135,11 +142,17 @@ const importAndIngestEvents = async (
     payload: ImportEventsJobPayload,
     meta: PluginMeta<RedshiftImportPlugin>
 ) => {
+
     const { global, cache, config, jobs } = meta
     console.log('launched job', payload.successiveRuns)
+    
 
     const totalRowsResult = await executeQuery(
-        `SELECT COUNT(1) FROM ${sanitizeSqlIdentifier(config.tableName)} WHERE NOT EXISTS (SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id)`,
+        `SELECT COUNT(1) FROM ${sanitizeSqlIdentifier(config.tableName)} 
+         WHERE NOT EXISTS (
+             SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
+             WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
+             )`,
         [],
         config
     )
