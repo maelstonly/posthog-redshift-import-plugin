@@ -312,11 +312,10 @@ const transformations: TransformationsMap = {
                 properties: {
                     distinct_id,
                     timestamp,
-                    ...JSON.parse(properties)
-                },
-                "$set": {
+                    ...JSON.parse(properties),
+                     "$set": {
                     ...JSON.parse(set)
-                }
+                    }
             }
             /*
             if (set){
