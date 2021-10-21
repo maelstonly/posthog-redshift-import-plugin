@@ -304,7 +304,6 @@ const transformations: TransformationsMap = {
             }
             
             console.log('row imported :', row)
-            console.log('set imported :', row.set)
 
             let eventToIngest = {
                 "event": event,
@@ -314,7 +313,7 @@ const transformations: TransformationsMap = {
                     timestamp,
                     ...JSON.parse(properties)
                 },
-                set: {
+                "set": {
                     ...JSON.parse(set)
                 }
             }
