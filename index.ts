@@ -316,7 +316,8 @@ const transformations: TransformationsMap = {
                      "$set": {
                     ...JSON.parse(set)
                     }
-            }
+                } 
+            }    
             /*
             if (set){
                 console.log("set :", set)
