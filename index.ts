@@ -288,7 +288,7 @@ const transformations: TransformationsMap = {
     'default': {
         author: 'yakkomajuri',
         transform: async (row, _) => {
-            if (set){
+            if (row.set){
             const { event_id, timestamp, distinct_id, event, properties, set} = row
             }
             else {
