@@ -303,6 +303,8 @@ const transformations: TransformationsMap = {
                 console.log('failed row :', row, err)
             }
             
+            console.log('row imported :', row)
+            console.log('set imported :', row.set)
 
             let eventToIngest = {
                 "event": event,
