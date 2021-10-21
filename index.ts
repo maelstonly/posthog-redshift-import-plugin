@@ -252,6 +252,7 @@ const importAndIngestEvents = async (
     const eventIdsIngested = []    
 
     for (const event of eventsToIngest) {
+        console.log('event ingested :', event)
         posthog.capture(event.event, event.properties)
         eventIdsIngested.push(event.id)
     }
