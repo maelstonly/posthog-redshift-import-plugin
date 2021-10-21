@@ -289,12 +289,9 @@ const transformations: TransformationsMap = {
         author: 'yakkomajuri',
         transform: async (row, _) => {
             console.log('row :', row)
-            if (row.set){
-            const { event_id, timestamp, distinct_id, event, properties, set} = row
-            }
-            else {
+
             const { event_id, timestamp, distinct_id, event, properties} = row
-            }
+            
             try {
                 parsing = JSON.parse(properties)
             } catch (err) {
