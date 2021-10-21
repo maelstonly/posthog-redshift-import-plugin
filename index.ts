@@ -52,7 +52,7 @@ const IS_CURRENTLY_IMPORTING = 'stripped_import_plugin_'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
 }
-const logMessage = async (message, config, logToRedshift = 0) => {
+const logMessage = async (message, config, logToRedshift = false) => {
     console.log(message)
     if (logToRedshift) {
         const query = `INSERT INTO ${sanitizeSqlIdentifier(config.pluginLogTableName)} (event_at, message) VALUES (GETDATE(), $1)`
@@ -100,7 +100,7 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
 export const teardownPlugin: RedshiftImportPlugin['teardownPlugin'] = async ({ global, cache, storage }) => {
     console.log('teardown')
     const beforeTearDown = await cache.get(IS_CURRENTLY_IMPORTING)
-    await storage.set(IS_CURRENTLY_IMPORTING, false)
+    await storage.set(IS_CURRENTLY_IMPORTING, 0)
     console.log("done launching")
 }
 
