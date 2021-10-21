@@ -305,8 +305,8 @@ const transformations: TransformationsMap = {
                     ...JSON.parse(properties)
                 }
             }
-            
             if (set){
+                console.log("set :", set)
                 eventToIngest['properties']['$set'] = JSON.parse(set) 
             }
             return eventToIngest
