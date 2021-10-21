@@ -288,7 +288,6 @@ const transformations: TransformationsMap = {
     'default': {
         author: 'yakkomajuri',
         transform: async (row, _) => {
-            console.log('row :', row)
 
             const { event_id, timestamp, distinct_id, event, properties, set} = row
             
@@ -314,7 +313,7 @@ const transformations: TransformationsMap = {
                     ...JSON.parse(properties)
                 }
                 set: {
-                    JSON.parse(set)
+                    ...JSON.parse(set)
                 }
             }
             /*
@@ -323,7 +322,6 @@ const transformations: TransformationsMap = {
                 eventToIngest['properties']['$set'] = JSON.parse(set) 
             }
             */
-           
             return eventToIngest
         }
     }
