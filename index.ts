@@ -314,7 +314,7 @@ const transformations: TransformationsMap = {
                     timestamp,
                     ...JSON.parse(properties)
                 },
-                "set": {
+                "$set": {
                     ...JSON.parse(set)
                 }
             }
