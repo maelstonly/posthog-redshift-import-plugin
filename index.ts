@@ -311,7 +311,7 @@ const transformations: TransformationsMap = {
                     distinct_id,
                     timestamp,
                     ...JSON.parse(properties)
-                }
+                },
                 set: {
                     ...JSON.parse(set)
                 }
