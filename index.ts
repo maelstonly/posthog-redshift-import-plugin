@@ -290,10 +290,16 @@ const transformations: TransformationsMap = {
         transform: async (row, _) => {
             console.log('row :', row)
 
-            const { event_id, timestamp, distinct_id, event, properties} = row
+            const { event_id, timestamp, distinct_id, event, properties, set} = row
             
             try {
                 parsing = JSON.parse(properties)
+            } catch (err) {
+                console.log('failed row :', row, err)
+            }
+
+            try {
+                parsing = JSON.parse(set)
             } catch (err) {
                 console.log('failed row :', row, err)
             }
@@ -307,6 +313,9 @@ const transformations: TransformationsMap = {
                     timestamp,
                     ...JSON.parse(properties)
                 }
+                set: {
+                    JSON.parse(set)
+                }
             }
             /*
             if (set){
@@ -314,6 +323,7 @@ const transformations: TransformationsMap = {
                 eventToIngest['properties']['$set'] = JSON.parse(set) 
             }
             */
+           
             return eventToIngest
         }
     }
