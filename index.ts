@@ -290,12 +290,14 @@ const transformations: TransformationsMap = {
         transform: async (row, _) => {
             const { event_id, timestamp, distinct_id, event, properties, set} = row
 
+            /*
             try {
                 parsing = JSON.parse(properties)
             } catch (err) {
                 console.log('failed row :', row, err)
             }
-            
+            */
+           
             let eventToIngest = {
                 "event": event,
                 id:event_id,
