@@ -51,7 +51,7 @@
             "name": "Import Table name",
             "type": "string",
             "required": true,
-            "default": "dbt_exports_posthog.heap_pageviews_backfill"
+            "default": "dbt_exports_posthog.identify_export"
         },
         {
             "key": "orderByColumn",
@@ -69,7 +69,7 @@
         {
             "key": "eventLogFailedTableName",
             "hint": "This is the table where the plugin will drop the failed event IDs.",
-            "name": "Imported Events Table name",
+            "name": "Imported failed Table name",
             "type": "string",
             "default": "src_posthog.failed_events_log"
         },
