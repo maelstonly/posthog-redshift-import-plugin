@@ -67,6 +67,13 @@
             "default": "src_posthog.exported_events_log"
         },
         {
+            "key": "eventLogFailedTableName",
+            "hint": "This is the table where the plugin will drop the failed event IDs.",
+            "name": "Imported Events Table name",
+            "type": "string",
+            "default": "src_posthog.failed_events_log"
+        },
+        {
             "key": "pluginLogTableName",
             "hint": "This is the table where the plugin send some plugin-logs for troubleshooting.",
             "name": "Plugin Logs Table name",

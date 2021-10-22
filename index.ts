@@ -207,6 +207,10 @@ const importAndIngestEvents = async (
         SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
         WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
         )
+    AND NOT EXISTS (
+        SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogFailedTableName)} 
+        WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogFailedTableName)}.event_id
+    )
     ORDER BY ${sanitizeSqlIdentifier(config.orderByColumn)}
     LIMIT ${EVENTS_PER_BATCH}`
 
@@ -243,23 +247,40 @@ const importAndIngestEvents = async (
     }
 
     const eventsToIngest: TransformedPluginEvent[] = []
+    const failedEvents : TransformedPluginEvent[] = []
 
     for (const row of queryResponse.queryResult!.rows) {
         const event = await transformations[config.transformationName].transform(row, meta)
-        eventsToIngest.push(event)
+        
+        if ( event['properties']['isSuccessfulParsing'] ){
+            eventsToIngest.push(event)
+        }
+        else {
+            failedEvents.push(event)
+        }
+
     }
     
     const eventIdsIngested = []    
+    const eventIdsFailed = []  
 
     for (const event of eventsToIngest) {
         console.log('event ingested :', event)
         posthog.capture(event.event, event.properties)
         eventIdsIngested.push(event.id)
     }
-    global.totalRows = global.totalRows - eventIdsIngested.length
+
+    for (const event of failedEvents) {
+        console.log('event failed:', event)
+        eventIdsFailed.push(event.id)
+    }
+
+    
+    global.totalRows = global.totalRows - (eventIdsIngested.length + failedEvents.length)
 
     
     const joinedEventIds = eventIdsIngested.map(x => `('${x}', GETDATE())`).join(',')
+    const joinedFailedIds = eventIdsFailed.map(x => `('${x}', GETDATE())`).join(',')
 
     const insertQuery = `INSERT INTO ${sanitizeSqlIdentifier(
         meta.config.eventLogTableName
@@ -269,8 +290,17 @@ const importAndIngestEvents = async (
     ${joinedEventIds}`
 
     const insertQueryResponse = await executeQuery(insertQuery, [], config)
+
+    const insertFailedEventsQuery = `INSERT INTO ${sanitizeSqlIdentifier(
+        meta.config.eventLogFailedTableName
+    )}
+    (event_id, exported_at)
+    VALUES
+    ${joinedEventIds}`
+
+    const insertQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)
  
-    if (eventsToIngest.length < EVENTS_PER_BATCH) { // ADAPTED ?
+    if ( (eventsToIngest.length + failedEvents.lenght) < EVENTS_PER_BATCH) { 
         //await storage.set(IS_CURRENTLY_IMPORTING, false)
         console.log('finished')
         await jobs
@@ -293,32 +323,37 @@ const transformations: TransformationsMap = {
             const { event_id, timestamp, distinct_id, event, properties, set} = row
             
             try {
-                parsing = JSON.parse(properties)
+                parsing_properties = JSON.parse(properties)
+                parsing_set = JSON.parse(set)
+
+                let eventToIngest = {
+                    "event": event,
+                    id:event_id,
+                    properties: {
+                        distinct_id,
+                        timestamp,
+                        isSuccessfulParsing : true,
+                        ...JSON.parse(properties),
+                         "$set": {
+                        ...JSON.parse(set)
+                        }
+                    } 
+                }   
+
             } catch (err) {
                 console.log('failed row :', row, err)
-            }
+                let eventToIngest = {
+                    "event": event,
+                    id:event_id,
+                    properties: {
+                        distinct_id,
+                        timestamp,
+                        isSuccessfulParsing : false
+                        }
+                    }     
+                }    
 
-            try {
-                parsing = JSON.parse(set)
-            } catch (err) {
-                console.log('failed row :', row, err)
-            }
-            
-            console.log('row imported :', row)
-
-            let eventToIngest = {
-                "event": event,
-                id:event_id,
-                properties: {
-                    distinct_id,
-                    timestamp,
-                    ...JSON.parse(properties),
-                     "$set": {
-                    ...JSON.parse(set)
-                    }
-                } 
-            }    
-            /*
+             /*
             if (set){
                 console.log("set :", set)
                 eventToIngest['properties']['$set'] = JSON.parse(set) 
