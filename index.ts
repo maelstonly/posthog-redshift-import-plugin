@@ -153,7 +153,7 @@ const importAndIngestEvents = async (
              SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
              WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
              )
-        )`,
+        `,
         [],
         config
     )
