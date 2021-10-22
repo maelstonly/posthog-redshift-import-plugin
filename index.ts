@@ -97,13 +97,6 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
    
 }
 
-export const teardownPlugin: RedshiftImportPlugin['teardownPlugin'] = async ({ global, cache, storage }) => {
-    console.log('teardown')
-    const beforeTearDown = await cache.get(IS_CURRENTLY_IMPORTING)
-    await storage.set(IS_CURRENTLY_IMPORTING, 0)
-    console.log("done launching")
-}
-
 
 // all the above log about offset are not triggered when historical importation 
 
@@ -127,8 +120,12 @@ const executeQuery = async (
     let queryResult: QueryResult<any> | null = null
     try {
         queryResult = await pgClient.query(query, values)
-    } catch (err) {
-        error = err
+    } catch {
+        try {
+            queryResult = await pgClient.query(query, values)
+        } catch (err) {
+            error = err
+        }
     }
     await pgClient.end()
 
