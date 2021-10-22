@@ -22,6 +22,7 @@ type RedshiftImportPlugin = Plugin<{
         eventsToIgnore: string
         orderByColumn: string
         eventLogTableName: string
+        eventLogFailedTableName: string
         pluginLogTableName: string
         transformationName: string
         importMechanism: 'Import continuously' | 'Only import historical data'
@@ -46,7 +47,7 @@ interface TransformationsMap {
         transform: (row: QueryResultRow, meta: PluginMeta<RedshiftImportPlugin>) => Promise<TransformedPluginEvent>
     }
 }
-const EVENTS_PER_BATCH = 250
+const EVENTS_PER_BATCH = 2000
 const RUN_LIMIT = 20
 const IS_CURRENTLY_IMPORTING = 'stripped_import_plugin_'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
@@ -66,7 +67,7 @@ export const jobs: RedshiftImportPlugin['jobs'] = {
 
 
 export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config, cache, jobs, global, storage, utils}) => {
-    await logMessage('setupPlugin', config, true)
+    console.log('setupPlugin', config, true)
 
     const requiredConfigOptions = ['clusterHost', 'clusterPort', 'dbName', 'dbUsername', 'dbPassword']
     for (const option of requiredConfigOptions) {
@@ -91,9 +92,9 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
         return
     }
 
-    logMessage('launching job', config, true)
+    console.log('launching job')
     await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
-    logMessage('done launching job', config, true)
+    console.log('done launching job')
    
 }
 
@@ -151,7 +152,11 @@ const importAndIngestEvents = async (
          WHERE NOT EXISTS (
              SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
              WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
-             )`,
+             )
+         AND NOT EXISTS (
+             SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogFailedTableName)} 
+             WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogFailedTableName)}.event_id
+        )`,
         [],
         config
     )
@@ -159,7 +164,7 @@ const importAndIngestEvents = async (
         throw new Error('Unable to connect to Redshift!')
     }
     global.totalRows = Number(totalRowsResult.queryResult.rows[0].count)
-    logMessage(global.totalRows, config, true)
+    console.log('total rows :', global.totalRows)
     
 
     /*
@@ -208,7 +213,6 @@ const importAndIngestEvents = async (
         SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogFailedTableName)} 
         WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogFailedTableName)}.event_id
     )
-    ORDER BY ${sanitizeSqlIdentifier(config.orderByColumn)}
     LIMIT ${EVENTS_PER_BATCH}`
 
     const queryResponse = await executeQuery(query, [], config)
@@ -292,7 +296,7 @@ const importAndIngestEvents = async (
     )}
     (event_id, attempted_at)
     VALUES
-    ${joinedEventIds}`
+    ${joinedFailedIds}`
 
     const insertFailedEventsQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)
  
