@@ -321,38 +321,31 @@ const transformations: TransformationsMap = {
         transform: async (row, _) => {
 
             const { event_id, timestamp, distinct_id, event, properties, set} = row
-            
-            try {
-                parsing_properties = JSON.parse(properties)
-                parsing_set = JSON.parse(set)
+            let eventToIngest = {
+                "event": event,
+                id:event_id,
+            }
 
-                let eventToIngest = {
-                    "event": event,
-                    id:event_id,
-                    properties: {
-                        distinct_id,
-                        timestamp,
-                        isSuccessfulParsing : true,
-                        ...JSON.parse(properties),
-                         "$set": {
-                        ...JSON.parse(set)
-                        }
-                    } 
-                }   
+            try {
+                const parsing_properties = JSON.parse(properties)
+                const parsing_set = JSON.parse(set)
+
+                eventToIngest['properties'] = {
+                    distinct_id,
+                    timestamp,
+                    ...parsing_properties,
+                    "$set": {
+                        ...parsing_set
+                    }
+                }    
+                eventToIngest['isSuccessfulParsing'] = true  
 
             } catch (err) {
                 console.log('failed row :', row, err)
-                let eventToIngest = {
-                    "event": event,
-                    id:event_id,
-                    properties: {
-                        distinct_id,
-                        timestamp,
-                        isSuccessfulParsing : false
-                        }
-                    }     
-                }    
+                eventToIngest['isSuccessfulParsing'] = false 
+            }
 
+ 
              /*
             if (set){
                 console.log("set :", set)
