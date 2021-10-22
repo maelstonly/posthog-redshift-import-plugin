@@ -298,7 +298,7 @@ const importAndIngestEvents = async (
     VALUES
     ${joinedEventIds}`
 
-    const insertQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)
+    const insertFailedEventsQueryResponse = await executeFailedEventsQuery(insertFailedEventsQuery, [], config)
  
     if ( (eventsToIngest.length + failedEvents.lenght) < EVENTS_PER_BATCH) { 
         //await storage.set(IS_CURRENTLY_IMPORTING, false)
