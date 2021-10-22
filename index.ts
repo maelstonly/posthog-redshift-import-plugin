@@ -265,7 +265,6 @@ const importAndIngestEvents = async (
     const eventIdsFailed = []  
 
     for (const event of eventsToIngest) {
-        console.log('event ingested :', event)
         posthog.capture(event.event, event.properties)
         eventIdsIngested.push(event.id)
     }
@@ -294,13 +293,13 @@ const importAndIngestEvents = async (
     const insertFailedEventsQuery = `INSERT INTO ${sanitizeSqlIdentifier(
         meta.config.eventLogFailedTableName
     )}
-    (event_id, exported_at)
+    (event_id, attempted_at)
     VALUES
     ${joinedEventIds}`
 
     const insertFailedEventsQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)
  
-    if ( (eventsToIngest.length + failedEvents.lenght) < EVENTS_PER_BATCH) { 
+    if ((eventsToIngest.length + failedEvents.length) < EVENTS_PER_BATCH) { 
         //await storage.set(IS_CURRENTLY_IMPORTING, false)
         console.log('finished')
         await jobs
