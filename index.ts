@@ -252,7 +252,7 @@ const importAndIngestEvents = async (
     for (const row of queryResponse.queryResult!.rows) {
         const event = await transformations[config.transformationName].transform(row, meta)
         
-        if ( event['properties']['isSuccessfulParsing'] ){
+        if ( event.isSuccessfulParsing ){
             eventsToIngest.push(event)
         }
         else {
