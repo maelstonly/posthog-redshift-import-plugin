@@ -47,7 +47,7 @@ interface TransformationsMap {
         transform: (row: QueryResultRow, meta: PluginMeta<RedshiftImportPlugin>) => Promise<TransformedPluginEvent>
     }
 }
-const EVENTS_PER_BATCH = 500
+const EVENTS_PER_BATCH = 2000
 const RUN_LIMIT = 20
 const IS_CURRENTLY_IMPORTING = 'stripped_import_plugin_'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
@@ -153,9 +153,6 @@ const importAndIngestEvents = async (
              SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
              WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
              )
-         AND NOT EXISTS (
-             SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogFailedTableName)} 
-             WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogFailedTableName)}.event_id
         )`,
         [],
         config
@@ -209,10 +206,6 @@ const importAndIngestEvents = async (
         SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
         WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
         )
-    AND NOT EXISTS (
-        SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogFailedTableName)} 
-        WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogFailedTableName)}.event_id
-    )
     LIMIT ${EVENTS_PER_BATCH}`
 
     const queryResponse = await executeQuery(query, [], config)
