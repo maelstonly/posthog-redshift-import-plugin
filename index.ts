@@ -146,18 +146,17 @@ const importAndIngestEvents = async (
     const { global, cache, config, jobs } = meta
     console.log('launched job', payload.successiveRuns)
     
-
-    const totalRowsResult = await executeQuery(
-        `SELECT COUNT(1) FROM ${sanitizeSqlIdentifier(config.tableName)} 
+    const totalRowsQuery = `SELECT COUNT(1) FROM ${sanitizeSqlIdentifier(config.tableName)} 
          WHERE NOT EXISTS (
              SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
              WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
-             )
-        `,
-        [],
-        config
-    )
+             )`
+    
+    const totalRowsResult = await executeQuery(totalRowsQuery, [], config)
+    
     if (!totalRowsResult || totalRowsResult.error || !totalRowsResult.queryResult) {
+        console.log(totalRowsQuery)
+        console.log(totalRowsResult)
         throw new Error('Unable to connect to Redshift!')
     }
     global.totalRows = Number(totalRowsResult.queryResult.rows[0].count)
