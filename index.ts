@@ -47,7 +47,7 @@ interface TransformationsMap {
         transform: (row: QueryResultRow, meta: PluginMeta<RedshiftImportPlugin>) => Promise<TransformedPluginEvent>
     }
 }
-const EVENTS_PER_BATCH = 1000
+const EVENTS_PER_BATCH = 3000
 const RUN_LIMIT = 20
 const IS_CURRENTLY_IMPORTING = 'stripped_import_plugin_'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
