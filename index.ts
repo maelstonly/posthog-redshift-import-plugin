@@ -49,6 +49,7 @@ interface TransformationsMap {
 }
 const EVENTS_PER_BATCH = 2000
 const RUN_LIMIT = 20
+const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 1800
 const IS_CURRENTLY_IMPORTING = 'new_key_2'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
@@ -84,21 +85,14 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     
     const cursorValue = await cursor.increment(IS_CURRENTLY_IMPORTING)
     
-    console.log('cursorValue = ', cursorValue)
-    
     if (cursorValue > 1) {
         console.log('EXIT due to cursorValue > 1')
         return
     }
-
-    console.log('launching job')
+    
     await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
-    console.log('done launching job')
    
 }
-
-
-// all the above log about offset are not triggered when historical importation 
 
 //EXECUTE QUERY FUNCTION
 const executeQuery = async (
@@ -136,15 +130,7 @@ const executeQuery = async (
     return { error, queryResult }
 }
 
-
-const importAndIngestEvents = async (
-    payload: ImportEventsJobPayload,
-    meta: PluginMeta<RedshiftImportPlugin>
-) => {
-
-    const { global, cache, config, jobs } = meta
-    console.log('launched job', payload.successiveRuns)
-    
+const getTotalRowsToImport = async (config) => {
     const totalRowsQuery = `SELECT COUNT(1) FROM ${sanitizeSqlIdentifier(config.tableName)} 
          WHERE NOT EXISTS (
              SELECT 1 FROM ${sanitizeSqlIdentifier(config.eventLogTableName)} 
@@ -156,39 +142,25 @@ const importAndIngestEvents = async (
     if (!totalRowsResult || totalRowsResult.error || !totalRowsResult.queryResult) {
         console.log(totalRowsQuery)
         console.log(totalRowsResult)
-        throw new Error('Unable to connect to Redshift!')
-    }
-    global.totalRows = Number(totalRowsResult.queryResult.rows[0].count)
-    console.log('total rows :', global.totalRows)
+        throw new Error(`Error while getting total rows to import: ${totalRowsResult.error}`)
+    }    
     
+    return Number(totalRowsResult.queryResult.rows[0].count)
+}
 
-    /*
-    // if set to only import historical data, take a "snapshot" of the count
-    // on the first run and only import up to that point
-    if (config.importMechanism === 'Only import historical data') {
-        const totalRowsSnapshot = await storage.get('total_rows_snapshot', null)
-        if (!totalRowsSnapshot) {
-            await storage.set('total_rows_snapshot', Number(totalRowsResult.queryResult.rows[0].count))
-        } else {
-            global.totalRows = Number(totalRowsSnapshot)
-        }*/
+const importAndIngestEvents = async (
+    payload: ImportEventsJobPayload,
+    meta: PluginMeta<RedshiftImportPlugin>
+) => {
 
-
-    //const storage = await payload.storage
-    //const storageValue = await storage.get(IS_CURRENTLY_IMPORTING)
-    //console.log('storage (storageValue in method), ', storageValue)
-    //console.log('storage in method:', storage, typeof storage)
-
-    if (payload.retriesPerformedSoFar >= 15) {
-        console.error(`Import error: Unable to process rows. Skipped them.`)
-        //await storage.set(IS_CURRENTLY_IMPORTING, false)
-        await jobs
-            .importAndIngestEvents({ ...payload, retriesPerformedSoFar: 0})
-            .runIn(10, 'seconds')
-        return
-    }
+    const { global, cache, config, jobs } = meta
+    console.log('Launched job #', payload.successiveRuns)
     
-    if (global.totalRows < 1)  {
+    const totalRowsToImport = await getTotalRowsToImport(config);
+    
+    console.log('Total rows :', totalRowsToImport)
+    
+    if (totalRowsToImport < 1)  {
         // await storage.set(IS_CURRENTLY_IMPORTING, false)
         console.log('nothing to import')
         await jobs
@@ -207,7 +179,7 @@ const importAndIngestEvents = async (
     LIMIT ${EVENTS_PER_BATCH}`
 
     const queryResponse = await executeQuery(query, [], config)
-    if (!queryResponse ) {
+    if (!queryResponse || queryResponse.error || !queryResponse.queryResult) {
         const nextRetrySeconds = 2 ** payload.retriesPerformedSoFar * 3
         console.log(
             `Unable to process rows. Retrying in ${nextRetrySeconds}. Error: ${queryResponse.error}`
@@ -216,26 +188,6 @@ const importAndIngestEvents = async (
             .importAndIngestEvents({ ...payload, retriesPerformedSoFar: payload.retriesPerformedSoFar + 1 })
             .runIn(nextRetrySeconds, 'seconds')
         return 
-    }
-    if (queryResponse.error ) {
-        const nextRetrySeconds = 2 ** payload.retriesPerformedSoFar * 3
-        console.log(
-            `Unable to process rows. Retrying in ${nextRetrySeconds}. Error: ${queryResponse.error}`
-        )
-        await jobs
-            .importAndIngestEvents({ ...payload, retriesPerformedSoFar: payload.retriesPerformedSoFar + 1 })
-            .runIn(nextRetrySeconds, 'seconds')
-        return
-    }
-    if (!queryResponse.queryResult ) {
-        const nextRetrySeconds = 2 ** payload.retriesPerformedSoFar * 3
-        console.log(
-            `Unable to process rows. Retrying in ${nextRetrySeconds}. Error: ${queryResponse.error}`
-        )
-        await jobs
-            .importAndIngestEvents({ ...payload, retriesPerformedSoFar: payload.retriesPerformedSoFar + 1 })
-            .runIn(nextRetrySeconds, 'seconds')
-        return
     }
 
     const eventsToIngest: TransformedPluginEvent[] = []
@@ -265,10 +217,6 @@ const importAndIngestEvents = async (
         console.log('event failed:', event)
         eventIdsFailed.push(event.id)
     }
-
-    
-    global.totalRows = global.totalRows - (eventIdsIngested.length + failedEvents.length)
-
     
     const joinedEventIds = eventIdsIngested.map(x => `('${x}', GETDATE())`).join(',')
     const joinedFailedIds = eventIdsFailed.map(x => `('${x}', GETDATE())`).join(',')
@@ -292,17 +240,15 @@ const importAndIngestEvents = async (
     const insertFailedEventsQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)
  
     if ((eventsToIngest.length + failedEvents.length) < EVENTS_PER_BATCH) { 
-        //await storage.set(IS_CURRENTLY_IMPORTING, false)
-        console.log('finished')
+        console.log(`Finished importing all events, scheduling next job in ${WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS} seconds`)
         await jobs
             .importAndIngestEvents({ ...payload, retriesPerformedSoFar: 0})
-            .runIn(10, 'seconds') 
+            .runIn(WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS, 'seconds')
         return
     }
 
     await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns : payload.successiveRuns+1 })
                .runIn(1, 'seconds')
-    console.log('Job ', payload.successiveRuns, ' after next call')
     return 
 }
 
@@ -336,13 +282,6 @@ const transformations: TransformationsMap = {
                 eventToIngest['isSuccessfulParsing'] = false 
             }
 
- 
-             /*
-            if (set){
-                console.log("set :", set)
-                eventToIngest['properties']['$set'] = JSON.parse(set) 
-            }
-            */
             return eventToIngest
         }
     }
