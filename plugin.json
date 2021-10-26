@@ -51,17 +51,17 @@
             "name": "Import Table name",
             "type": "string",
             "required": true,
-            "default": "dbt_exports_posthog.identify_export"
+            "default": "dbt_exports_posthog.posthog_new_users"
         },
         {
             "key": "orderByColumn",
             "name": "'Order by' column",
             "type": "string",
-            "default": "timestamp"
+            "default": "db_user_id"
         },
         {
             "key": "eventLogTableName",
-            "hint": "This is the table where the plugin will drop the event IDs that were successfully imported.",
+            "hint": "This is the table where the plugin will drop the event IDs that were processed (success or not).",
             "name": "Imported Events Table name",
             "type": "string",
             "default": "src_posthog.exported_events_log"
@@ -74,33 +74,12 @@
             "default": "src_posthog.failed_events_log"
         },
         {
-            "key": "pluginLogTableName",
-            "hint": "This is the table where the plugin send some plugin-logs for troubleshooting.",
-            "name": "Plugin Logs Table name",
-            "type": "string",
-            "default": "src_posthog.plugin_run_log"
-        },
-        {
             "key": "transformationName",
             "name": "Select a transformation to apply to your data:",
             "type": "choice",
             "hint": "Visit the [plugin's repository](https://github.com/posthog/posthog-redshift-import-plugin) to learn more about the available transformations or [contribute your own](https://github.com/posthog/posthog-redshift-import-plugin#contributing-a-transformation).",
             "choices": ["default", "JSON Map"],
             "default": "default"
-        },
-        {
-            "key": "rowToEventMap",
-            "name": "Upload a JSON mapping of your row data to a PostHog event",
-            "type": "attachment",
-            "required_if": [["transformationName", "JSON Map"]],
-            "visible_if": [["transformationName", "JSON Map"]]
-        },
-        {
-            "key": "importMechanism",
-            "name": "Would you like this plugin to keep importing data as the table grows or only import data added up to the point of installation?",
-            "type": "choice",
-            "choices": ["Import continuously", "Only import historical data"],
-            "default": "Import continuously"
         }
     ]
 }
