@@ -196,13 +196,11 @@ const importAndIngestEvents = async (
     for (const row of queryResponse.queryResult!.rows) {
         const event = await transformations[config.transformationName].transform(row, meta)
         
-        if ( event.isSuccessfulParsing ){
+        if (event.isSuccessfulParsing) {
             eventsToIngest.push(event)
-        }
-        else {
+        } else {
             failedEvents.push(event)
         }
-
     }
     
     const eventIdsIngested = []    
@@ -216,28 +214,38 @@ const importAndIngestEvents = async (
     for (const event of failedEvents) {
         console.log('event failed:', event)
         eventIdsFailed.push(event.id)
+        // regardless of parsing status, we add the event as ingested.
+        // these events are also stoed in failedEvents, so we can always get back to them
+        // we do this to not have to check 2 tables for events we already processed
+        eventIdsIngested.push(event.id)
     }
     
-    const joinedEventIds = eventIdsIngested.map(x => `('${x}', GETDATE())`).join(',')
-    const joinedFailedIds = eventIdsFailed.map(x => `('${x}', GETDATE())`).join(',')
+    if (eventIdsIngested.length) {
+        const joinedEventIds = eventIdsIngested.map(x => `('${x}', GETDATE())`).join(',')
 
-    const insertQuery = `INSERT INTO ${sanitizeSqlIdentifier(
-        meta.config.eventLogTableName
-    )}
-    (event_id, exported_at)
-    VALUES
-    ${joinedEventIds}`
+        const insertQuery = `INSERT INTO ${sanitizeSqlIdentifier(
+            meta.config.eventLogTableName
+        )}
+        (event_id, exported_at)
+        VALUES
+        ${joinedEventIds}`
 
-    const insertQueryResponse = await executeQuery(insertQuery, [], config)
+        const insertQueryResponse = await executeQuery(insertQuery, [], config)        
+    }
 
-    const insertFailedEventsQuery = `INSERT INTO ${sanitizeSqlIdentifier(
-        meta.config.eventLogFailedTableName
-    )}
-    (event_id, attempted_at)
-    VALUES
-    ${joinedFailedIds}`
+    if (eventIdsFailed.length) {
+        const joinedFailedIds = eventIdsFailed.map(x => `('${x}', GETDATE())`).join(',')
+        const insertFailedEventsQuery = `INSERT INTO ${sanitizeSqlIdentifier(
+            meta.config.eventLogFailedTableName
+        )}
+        (event_id, attempted_at)
+        VALUES
+        ${joinedFailedIds}`
 
-    const insertFailedEventsQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)
+        const insertFailedEventsQueryResponse = await executeQuery(insertFailedEventsQuery, [], config)        
+    }
+    
+    
  
     if ((eventsToIngest.length + failedEvents.length) < EVENTS_PER_BATCH) { 
         console.log(`Finished importing all events, scheduling next job in ${WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS} seconds`)
