@@ -46,7 +46,7 @@ const EVENTS_PER_BATCH = 2000
 const RUN_LIMIT = 20
 const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 1800
 const IS_CURRENTLY_IMPORTING = 'new_key_2'
-const TRANSFORMATION_NAME = 'default
+const TRANSFORMATION_NAME = 'default'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
 }
