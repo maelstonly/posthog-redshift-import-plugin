@@ -7,7 +7,6 @@ declare namespace posthog {
 type RedshiftImportPlugin = Plugin<{
     global: {
         pgClient: Client
-        eventsToIgnore: Set<string>
         sanitizedTableName: string
         initialOffset: number
         totalRows: number
@@ -19,13 +18,9 @@ type RedshiftImportPlugin = Plugin<{
         tableName: string
         dbUsername: string
         dbPassword: string
-        eventsToIgnore: string
         orderByColumn: string
         eventLogTableName: string
         eventLogFailedTableName: string
-        pluginLogTableName: string
-        transformationName: string
-        importMechanism: 'Import continuously' | 'Only import historical data'
     }
 }>
 
@@ -51,6 +46,7 @@ const EVENTS_PER_BATCH = 2000
 const RUN_LIMIT = 20
 const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 1800
 const IS_CURRENTLY_IMPORTING = 'new_key_2'
+const TRANSFORMATION_NAME = 'default
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
 }
@@ -194,7 +190,7 @@ const importAndIngestEvents = async (
     const failedEvents : TransformedPluginEvent[] = []
 
     for (const row of queryResponse.queryResult!.rows) {
-        const event = await transformations[config.transformationName].transform(row, meta)
+        const event = await transformations[TRANSFORMATION_NAME].transform(row, meta)
         
         if (event.isSuccessfulParsing) {
             eventsToIngest.push(event)
