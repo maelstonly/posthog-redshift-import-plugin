@@ -157,11 +157,10 @@ const importAndIngestEvents = async (
     console.log('Total rows :', totalRowsToImport)
     
     if (totalRowsToImport < 1)  {
-        // await storage.set(IS_CURRENTLY_IMPORTING, false)
-        console.log('nothing to import')
+        console.log(`Nothing to import, scheduling next job in ${WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS} seconds`)
         await jobs
             .importAndIngestEvents({ ...payload, retriesPerformedSoFar: 0})
-            .runIn(10, 'seconds')
+            .runIn(WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS, 'seconds')
         return
     }
 
