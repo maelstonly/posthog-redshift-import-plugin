@@ -288,4 +288,34 @@ const transformations: TransformationsMap = {
             return eventToIngest
         }
     }
+    
+    'users_group': {
+        author: 'mgrn',
+        transform: async (row, _) => {
+
+            const { event_id, timestamp, distinct_id, event, properties} = row
+            let eventToIngest = {
+                "event": event,
+                id:event_id,
+            }
+
+            try {
+                const parsing_properties = JSON.parse(properties)
+                const parsing_set = JSON.parse(set)
+
+                eventToIngest['properties'] = {
+                    distinct_id,
+                    timestamp,
+                    ...parsing_properties,
+                }    
+                eventToIngest['isSuccessfulParsing'] = true  
+
+            } catch (err) {
+                console.log('failed row :', row, err)
+                eventToIngest['isSuccessfulParsing'] = false 
+            }
+
+            return eventToIngest
+        }
+    }
 }
