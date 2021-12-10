@@ -287,7 +287,7 @@ const transformations: TransformationsMap = {
 
             return eventToIngest
         }
-    }
+    },
     
     'users_group': {
         author: 'mgrn',
