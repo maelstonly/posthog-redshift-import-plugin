@@ -78,7 +78,7 @@
             "name": "Select a transformation to apply to your data:",
             "type": "choice",
             "hint": "Visit the [plugin's repository](https://github.com/posthog/posthog-redshift-import-plugin) to learn more about the available transformations or [contribute your own](https://github.com/posthog/posthog-redshift-import-plugin#contributing-a-transformation).",
-            "choices": ["default", "JSON Map"],
+            "choices": ["default", "JSON Map", "users_group"],
             "default": "default"
         }
     ]
