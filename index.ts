@@ -78,10 +78,10 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     const cursor = utils.cursor
     
     await cursor.init(IS_CURRENTLY_IMPORTING)
-    console.log('cursor (1):', cursor)
+    console.log('cursor (1):', cursor.init)
     
     const cursorValue = await cursor.increment(IS_CURRENTLY_IMPORTING)
-    console.log('cursor (2):', cursor)
+    console.log('cursor (2):', cursorValue)
     
     if (cursorValue > 1) {
         console.log('EXIT due to cursorValue > 1')
