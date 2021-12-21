@@ -90,7 +90,7 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     
     console.log('launching job')
     await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
-   
+    console.log('job finished')
 }
 
 //EXECUTE QUERY FUNCTION
@@ -151,7 +151,8 @@ const importAndIngestEvents = async (
     payload: ImportEventsJobPayload,
     meta: PluginMeta<RedshiftImportPlugin>
 ) => {
-
+    
+    console.log('first step')
     const { global, cache, config, jobs } = meta
     console.log('Launched job #', payload.successiveRuns)
     
