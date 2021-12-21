@@ -45,7 +45,7 @@ interface TransformationsMap {
 const EVENTS_PER_BATCH = 200
 const RUN_LIMIT = 20
 const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 21600
-const IS_CURRENTLY_IMPORTING = 'new_key_7'
+const IS_CURRENTLY_IMPORTING = 'new_key_8'
 const TRANSFORMATION_NAME = 'users_group'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
