@@ -51,7 +51,7 @@
             "name": "Import Table name",
             "type": "string",
             "required": true,
-            "default": "dbt_exports_posthog.posthog_new_users"
+            "default": "dbt_exports_posthog.posthog_users_with_orgs"
         },
         {
             "key": "orderByColumn",
@@ -79,7 +79,7 @@
             "type": "choice",
             "hint": "Visit the [plugin's repository](https://github.com/posthog/posthog-redshift-import-plugin) to learn more about the available transformations or [contribute your own](https://github.com/posthog/posthog-redshift-import-plugin#contributing-a-transformation).",
             "choices": ["default", "JSON Map", "users_group"],
-            "default": "default"
+            "default": "users_group"
         }
     ]
 }
