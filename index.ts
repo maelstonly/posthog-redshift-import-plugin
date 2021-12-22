@@ -90,7 +90,7 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     
     console.log('launching job')
     /*const totalRowsToImport = await getTotalRowsToImport(config)*/
-    const jobs.importAndIngestEvent({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
+    await jobs.importAndIngestEvent({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
     console.log('job finished')
 }
 
