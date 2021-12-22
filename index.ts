@@ -137,6 +137,8 @@ const getTotalRowsToImport = async (config) => {
              WHERE ${sanitizeSqlIdentifier(config.tableName)}.event_id = ${sanitizeSqlIdentifier(config.eventLogTableName)}.event_id
              )`
     
+    console.log('first step of total rows')
+    
     const totalRowsResult = await executeQuery(totalRowsQuery, [], config)
     
     if (!totalRowsResult || totalRowsResult.error || !totalRowsResult.queryResult) {
