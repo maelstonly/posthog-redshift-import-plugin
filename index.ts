@@ -42,11 +42,11 @@ interface TransformationsMap {
         transform: (row: QueryResultRow, meta: PluginMeta<RedshiftImportPlugin>) => Promise<TransformedPluginEvent>
     }
 }
-const EVENTS_PER_BATCH = 2000
+const EVENTS_PER_BATCH = 200
 const RUN_LIMIT = 20
-const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 1800
-const IS_CURRENTLY_IMPORTING = 'new_key_15'
-const TRANSFORMATION_NAME = 'default'
+const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 2
+const IS_CURRENTLY_IMPORTING = 'new_key_16'
+const TRANSFORMATION_NAME = 'users_group'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
 }
@@ -59,7 +59,7 @@ const logMessage = async (message, config, logToRedshift = false) => {
 }
 
 export const jobs: RedshiftImportPlugin['jobs'] = {
-    importAndIngestEvents: async (payload, meta) => await importAndIngestEvents(payload as ImportEventsJobPayload, meta)
+    importAndIngestEvent: async (payload, meta) => await importAndIngestEvent(payload as ImportEventsJobPayload, meta)
 }
 
 
@@ -76,19 +76,21 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     }
 
     const cursor = utils.cursor
-
+    
     await cursor.init(IS_CURRENTLY_IMPORTING)
+    console.log('cursor (1):', IS_CURRENTLY_IMPORTING)
     
     const cursorValue = await cursor.increment(IS_CURRENTLY_IMPORTING)
+    console.log('cursor (2):', cursorValue)
     
     if (cursorValue > 1) {
         console.log('EXIT due to cursorValue > 1')
         return
     }
     
-    console.log('job to be launched')
-    await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
-    console.log('job launched')   
+    console.log('launching job')
+    await jobs.importAndIngestEvent({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
+    console.log('job finished')
 }
 
 //EXECUTE QUERY FUNCTION
@@ -135,22 +137,22 @@ const getTotalRowsToImport = async (config) => {
              )`
     
     const totalRowsResult = await executeQuery(totalRowsQuery, [], config)
-    console.log('total rows calculated')
+    
     if (!totalRowsResult || totalRowsResult.error || !totalRowsResult.queryResult) {
         console.log(totalRowsQuery)
         console.log(totalRowsResult)
         throw new Error(`Error while getting total rows to import: ${totalRowsResult.error}`)
     }    
-    
+    console.log('total rows calculated')
     return Number(totalRowsResult.queryResult.rows[0].count)
 }
 
-const importAndIngestEvents = async (
+const importAndIngestEvent = async (
     payload: ImportEventsJobPayload,
     meta: PluginMeta<RedshiftImportPlugin>
 ) => {
- 
-    console.log('job running')
+    
+    console.log('first step')
     const { global, cache, config, jobs } = meta
     console.log('Launched job #', payload.successiveRuns)
     
@@ -161,7 +163,7 @@ const importAndIngestEvents = async (
     if (totalRowsToImport < 1)  {
         console.log(`Nothing to import, scheduling next job in ${WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS} seconds`)
         await jobs
-            .importAndIngestEvents({ ...payload, retriesPerformedSoFar: 0})
+            .importAndIngestEvent({ ...payload, retriesPerformedSoFar: 0})
             .runIn(WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS, 'seconds')
         return
     }
@@ -182,7 +184,7 @@ const importAndIngestEvents = async (
             `Unable to process rows. Retrying in ${nextRetrySeconds}. Error: ${queryResponse.error}`
         )
         await jobs
-            .importAndIngestEvents({ ...payload, retriesPerformedSoFar: payload.retriesPerformedSoFar + 1 })
+            .importAndIngestEvent({ ...payload, retriesPerformedSoFar: payload.retriesPerformedSoFar + 1 })
             .runIn(nextRetrySeconds, 'seconds')
         return 
     }
@@ -247,12 +249,12 @@ const importAndIngestEvents = async (
     if ((eventsToIngest.length + failedEvents.length) < EVENTS_PER_BATCH) { 
         console.log(`Finished importing all events, scheduling next job in ${WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS} seconds`)
         await jobs
-            .importAndIngestEvents({ ...payload, retriesPerformedSoFar: 0})
+            .importAndIngestEvent({ ...payload, retriesPerformedSoFar: 0})
             .runIn(WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS, 'seconds')
         return
     }
 
-    await jobs.importAndIngestEvents({ retriesPerformedSoFar: 0, successiveRuns : payload.successiveRuns+1 })
+    await jobs.importAndIngestEvent({ retriesPerformedSoFar: 0, successiveRuns : payload.successiveRuns+1 })
                .runIn(1, 'seconds')
     return 
 }
@@ -279,6 +281,36 @@ const transformations: TransformationsMap = {
                     "$set": {
                         ...parsing_set
                     }
+                }    
+                eventToIngest['isSuccessfulParsing'] = true  
+
+            } catch (err) {
+                console.log('failed row :', row, err)
+                eventToIngest['isSuccessfulParsing'] = false 
+            }
+
+            return eventToIngest
+        }
+    },
+    
+    'users_group': {
+        author: 'mgrn',
+        transform: async (row, _) => {
+
+            const { event_id, timestamp, distinct_id, event, properties} = row
+            let eventToIngest = {
+                "event": event,
+                id:event_id,
+            }
+
+            try {
+                const parsing_properties = JSON.parse(properties)
+                const parsing_set = JSON.parse(set)
+
+                eventToIngest['properties'] = {
+                    distinct_id,
+                    timestamp,
+                    ...parsing_properties,
                 }    
                 eventToIngest['isSuccessfulParsing'] = true  
 
