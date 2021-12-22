@@ -143,7 +143,7 @@ const getTotalRowsToImport = async (config) => {
         console.log(totalRowsResult)
         throw new Error(`Error while getting total rows to import: ${totalRowsResult.error}`)
     }    
-    
+    console.log('total rows calculated')
     return Number(totalRowsResult.queryResult.rows[0].count)
 }
 
