@@ -45,7 +45,7 @@ interface TransformationsMap {
 const EVENTS_PER_BATCH = 200
 const RUN_LIMIT = 20
 const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 2
-const IS_CURRENTLY_IMPORTING = 'new_key_19'
+const IS_CURRENTLY_IMPORTING = 'new_key_20'
 const TRANSFORMATION_NAME = 'users_group'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
@@ -146,7 +146,7 @@ const getTotalRowsToImport = async (config) => {
         console.log(totalRowsResult)
         throw new Error(`Error while getting total rows to import: ${totalRowsResult.error}`)
     }    
-    console.log('total rows calculated')
+    console.log('total rows calculated', Number(totalRowsResult.queryResult.rows[0].count))
     return Number(totalRowsResult.queryResult.rows[0].count)
 }
 
