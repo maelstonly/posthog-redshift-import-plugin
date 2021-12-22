@@ -51,7 +51,7 @@
             "name": "Import Table name",
             "type": "string",
             "required": true,
-            "default": "dbt_exports_posthog.posthog_users_with_orgs"
+            "default": "dbt_exports_posthog.posthog_users_with_org"
         },
         {
             "key": "orderByColumn",
