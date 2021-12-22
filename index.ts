@@ -45,7 +45,7 @@ interface TransformationsMap {
 const EVENTS_PER_BATCH = 200
 const RUN_LIMIT = 20
 const WHEN_DONE_NEXT_JOB_SCHEDULE_SECONDS = 2
-const IS_CURRENTLY_IMPORTING = 'new_key_21'
+const IS_CURRENTLY_IMPORTING = 'new_key_22'
 const TRANSFORMATION_NAME = 'users_group'
 const sanitizeSqlIdentifier = (unquotedIdentifier: string): string => {
     return unquotedIdentifier
@@ -89,7 +89,7 @@ export const setupPlugin: RedshiftImportPlugin['setupPlugin'] = async ({ config,
     }
     
     console.log('launching job')
-    const totalRowsToImport = await getTotalRowsToImport(config)
+    /*const totalRowsToImport = await getTotalRowsToImport(config)*/
     const jobs.importAndIngestEvent({ retriesPerformedSoFar: 0, successiveRuns: 0 }).runIn(10, 'seconds')
     console.log('job finished')
 }
