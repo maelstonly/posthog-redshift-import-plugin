@@ -153,6 +153,7 @@ const importAndIngestEvent = async (
 ) => {
     
     console.log('first step')
+    /*
     const { global, cache, config, jobs } = meta
     console.log('Launched job #', payload.successiveRuns)
     
@@ -256,7 +257,7 @@ const importAndIngestEvent = async (
 
     await jobs.importAndIngestEvent({ retriesPerformedSoFar: 0, successiveRuns : payload.successiveRuns+1 })
                .runIn(1, 'seconds')
-    return 
+    return */
 }
 
 const transformations: TransformationsMap = {
